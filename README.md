@@ -1,4 +1,4 @@
-# ardurasp1
+# ardurasp
 Rapberry Pi + Arduino
 
 [ENG]
