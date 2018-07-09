@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Pagina protetta da password</title>
+  <style>
+  input[type="password"] { border: 1px solid #DDD; }
+  </style>
+</head>
+<body>
+<?php
+// -------------------------
+$password = 'accesso';
+// -------------------------
+$pwd = isset($_GET['pwd']) ? $_GET['pwd'] : false;
+if (!$pwd || $pwd != $password) {
+  ?>
+<form method="get" action="<?php echo $_SERVER['PHPSELF']; ?>">
+<table border="0" cellspacing="0" cellpadding="10">
+<?php if ($pwd !== false): ?><tr class="errore"><td colspan="3">La password inserita non e corretta!</td></tr><?php endif; ?>
+<center>
+<tr>
+  <td>Password</td>
+  <td><input type="password" name="pwd" style="width: 180px;"/></td>
+  <td><input type="submit" value="Entra"/></td>
+</tr>
+</table>
+</form>
+</center>
+  <?php														  	// pagina protetta fuori dai tag
+}else{
+  ?>
+
+<?php
+error_reporting(E_ALL);
+ini_set("display_errors", 1);
+define("PORT","/dev/ttyACM0");
+ 
+$pin12="red_light.png";
+$pin13="red_light.png";
+
+$stringa [14]="";
+
+ 
+    include "php_serial.class.php";				// importo classe seriale
+		$serial = new phpSerial;
+		$serial->deviceSet(PORT);
+        $serial->confBaudRate(115200);
+        $serial->confParity("none");
+        $serial->confCharacterLength(8);
+        $serial->confStopBits(1);
+        $serial->confFlowControl("none");
+        $serial->deviceOpen();
+
+		
+		
+if (isset($_GET['action'])) { 					// prendo in input i dati
+	switch ($_GET['action']) { 
+		
+		case "off12":  
+				$serial->sendMessage("s12");
+			break;
+		case "on12":  
+				$serial->sendMessage("a12");
+			break;
+		case "off13":  
+				$serial->sendMessage("s13");
+			break;
+		case "on13":  
+				$serial->sendMessage("a13");
+			break;
+	}
+	usleep(10000);
+}
+
+	$serial->sendMessage("?");					// stampo a video lo stato dei led
+	usleep(10000);
+	$stringa = explode("|", $serial->readPort(), -1);
+	for($i=0; $i<count($stringa); $i++){
+			switch ($stringa [$i]){
+				case 12:
+						$pin12="greenLight2.png";
+					break;
+				case 13:
+						$pin13="greenLight2.png";
+					break;
+			}
+		}
+	
+	$serial->sendMessage("?");
+	usleep(10000);
+	$accesi = $serial->readPort();
+	$serial->deviceClose(); 
+?>
+ 
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+"http://www.w3.org/TR/html4/loose.dtd"> 
+<html> 
+<head> 
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1"> 
+<title>Test Arduino</title> 
+</head> 
+<body> 
+<br>
+<h1>Test Arduino</h1><br />
+	<table border="1px" height="70" align="left">  
+		<tr>
+			<td rowspan="2" width=120><center>PIN<br />ARDUINO</center></td>
+			<td width=70><center>PIN 12<br /><img src=<?php echo $pin12;?>></center></td>
+			<td width=70><center>PIN 13<br /><img src=<?php echo $pin13;?>></center></td>				
+			<td rowspan="2" width=30><a href="index.php?pwd=<?php echo $password  ?>"><img width=20 src=icon-refresh-128></a></td>
+		</tr>
+	</table><br /><br /><br />
+<h1>PIN 12<h1>
+<a href="<?=$_SERVER['PHP_SELF'] . "?action=on12&pwd=$password"?>">
+<button style="width:100px""><h1>ON</h1></button></a>
+<a href="<?=$_SERVER['PHP_SELF'] . "?action=off12&pwd=$password"?>">
+<button style="width:100px""><h1>OFF</h1></button></a><br />
+<h1>PIN 13<h1>
+<a href="<?=$_SERVER['PHP_SELF'] . "?action=on13&pwd=$password" ?>">
+<button style="width:100px""><h1>ON</h1></button></a>
+<a href="<?=$_SERVER['PHP_SELF'] . "?action=off13&pwd=$password" ?>">
+<button style="width:100px""><h1>OFF</h1></button></a>
+<a href="<?=$_SERVER['PHP_SELF'] . "?action=on13&pwd=$password" ?>"></a><br /><br />
+<h2>PIN REALMENTE ACCESI</h2>
+<h3>I Pin attivi sono: <?php if($accesi!="") {echo $accesi;}else{echo "Nessuno";}?></h3><br />
+</body> 
+</html>
+
+  <?php 
+}
+?>
+</body>
+</html>

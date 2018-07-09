@@ -1,0 +1,3 @@
+Stato led: 
+Stato Stringa: 
+Selftest: 1313|13|
