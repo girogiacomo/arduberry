@@ -1,91 +1,169 @@
-// rf22_server.pde
-// -*- mode: C++ -*-
-// Example sketch showing how to create a simple messageing server
-// with the RH_RF22 class. RH_RF22 class does not provide for addressing or
-// reliability, so you should only use RH_RF22  if you do not need the higher
-// level messaging abilities.
-// It is designed to work with the other example rf22_client
-// Tested on Duemilanove, Uno with Sparkfun RFM22 wireless shield
-// Tested on Flymaple with sparkfun RFM22 wireless shield
-// Tested on ChiKit Uno32 with sparkfun RFM22 wireless shield
-
+#include <avr/io.h>
+#include <avr/wdt.h>
 #include <SPI.h>
 #include <RH_RF22.h>
-
-// Singleton instance of the radio driver
+#define Reset_AVR() wdt_enable(WDTO_30MS); while(1) {} 
 RH_RF22 rf22;
-bool sette = LOW, sei = LOW;
-float freq = 434;
-float delta = 0.05;
 int index=13;
-String key = "atxZ47CG";
+int tmp=0, duty_pulse, pred=44, pgreen=45, pblue=46, pduty=4, pos=0;
+#define pmin 22
+#define pmax 43
 void setup() {
+  pinMode(pred, OUTPUT);
+  pinMode(pgreen, OUTPUT);
+  pinMode(pblue, OUTPUT);
+  pinMode(pduty, OUTPUT);
+  for(int i=pmin; i<=pmax; i++){
+    pinMode(i, INPUT);
+    i++;
+    pinMode(i, OUTPUT);
+  }
   Serial.begin(9600);
-  pinMode(7, OUTPUT);
-  pinMode(6, OUTPUT);
+  Serial.setTimeout(100);
   pinMode(11, INPUT);
   pinMode(12, INPUT);
   pinMode(13, INPUT);
   if (!rf22.init())
-    Serial.println("init failed");  
+    Serial.println("init failed");
   rf22.setModemConfig(index);
 }
 
-void loop(){
-  if(Serial.available()){
-      String dati = key + Serial.readString();
-      //Serial.println("Sending to rf22_server: " + dati);
-      char data[dati.length()+1+8];
-      dati.toCharArray(data, dati.length()+1+8);
-      rf22.send(data, sizeof(data));
-      
-      rf22.waitPacketSent();
-      
-      delay(400);
-  }
-  if (rf22.available()){
+String key = "atxZ47CG";
+boolean decrementa, pulse;
+boolean pin[pmax+1]={0};
+String red, green, blue, duty, sendstring;
+String inString="";
+char inChar;
+
+void Pulse(){
+  analogWrite(pduty, 255-duty_pulse); 
+  if(duty_pulse>254){decrementa = 1;}
+  if(duty_pulse<2){decrementa = 0;}
+  if (decrementa){duty_pulse--;}else{duty_pulse++;}
+  delay(6);
+}
+
+void loop() {
+
+if (pulse)
+  Pulse();
+
+if (rf22.available()){
     uint8_t buf[RH_RF22_MAX_MESSAGE_LEN];
     uint8_t len = sizeof(buf);
     if (rf22.recv(buf, &len)){
-    bool flag = HIGH;
-    for(int i = 0; i < 8; i++)
-      if(key.charAt(i) == char(buf[i])) {
-       // Serial.print(i);
-        //Serial.print("-OK ");
-        }else{
-        flag = LOW;
-       // Serial.print(i);
-       // Serial.print("-KO ");
-      }
-     //Serial.println();
-    if(flag == HIGH){
-      
-        //Serial.print("got request: ");
-        String msg = (char*)buf;
-        msg = msg.substring(8);     // FROM, TO
-        /*
-        for(int i=8; i<sizeof(buf); i++)
-          msg += char(buf[i]);
-          */
-        Serial.println(msg);
-        /*
-        if(msg=="!£$%&/()="){
-          sette = !sette;
-        }else{
-          sei = !sei;
+      bool flag = HIGH;
+      for(int pos = 0; pos < 8; pos++)
+        if(key.charAt(pos) == char(buf[pos])){;}else{flag = LOW;}
+      if(flag == HIGH){
+      String inString = (char*)buf;
+      Serial.println(inString);
+      inString = inString.substring(8);
+      Serial.println(inString);
+      while(inString !=""){
+          Serial.println(inString);
+          char switchchar = inString.charAt(0);
+          inString = inString.substring(1);
+          switch (switchchar) { 
+              case 'a':                                      // accensione
+                    pos = inString.indexOf('*');
+                    tmp = inString.substring(0, pos).toInt();
+                    inString = inString.substring(pos);
+                    Serial.println(tmp);
+                    if (tmp>=pmin && tmp<=pmax){
+                        digitalWrite(tmp, HIGH); 
+                        pin[tmp]=true;
+                     }
+                break;
+              case 's':                                     // spegnimento
+                    pos = inString.indexOf('*');
+                    tmp = inString.substring(0, pos).toInt();
+                    inString = inString.substring(pos);
+                    Serial.println(tmp);
+                    if (tmp>=pmin && tmp<=pmax){
+                        digitalWrite(tmp, LOW); 
+                        pin[tmp]=false;
+                    }
+                break;
+              case 't':                                     // toggle
+                    pos = inString.indexOf('*');
+                    tmp = inString.substring(0, pos).toInt();
+                    inString = inString.substring(pos);
+                    Serial.println(tmp);
+                    if (tmp>=pmin && tmp<=pmax){
+                        pin[tmp] = !pin[tmp];
+                        digitalWrite(tmp, pin[tmp]); 
+                     }
+                break;
+              case '?':                                     // stato
+              {
+                    sendstring = key;
+                    for(int i=pmin; i<=pmax; i++){
+                      if(pin[i]==true){
+                        sendstring += i;
+                        sendstring += "|";
+                      }
+                    }
+                    sendstring += "r|";
+                    sendstring += red;
+                    sendstring += "|g|";
+                    sendstring += green;
+                    sendstring += "|b|";
+                    sendstring += blue;
+                    sendstring += "|d|";
+                    sendstring += duty;
+                    sendstring += "|";
+                    if(pulse)
+                      sendstring += "p|"; 
+                    char data[sendstring.length()+1];
+                    sendstring.toCharArray(data, sendstring.length()+1);
+                    delay(150);
+                    rf22.send(data, sizeof(data)); 
+                    Serial.println((char*)data);
+                    rf22.waitPacketSent(); 
+              }
+                break;
+             case 'R':
+                    Reset_AVR();
+                break;
+             case 'r':
+                    pos = inString.indexOf('*');
+                    red = inString.substring(0, pos);
+                    inString = inString.substring(pos);
+                    analogWrite(pred, red.toInt()); 
+                break;
+             case 'g':
+                    pos = inString.indexOf('*');
+                    green = inString.substring(0, pos);
+                    inString = inString.substring(pos);
+                    analogWrite(pgreen, green.toInt()); 
+                break;
+             case 'b':
+                    pos = inString.indexOf('*');
+                    blue = inString.substring(0, pos);
+                    inString = inString.substring(pos);
+                    analogWrite(pblue, blue.toInt());
+                break;
+             case 'd':
+                    pos = inString.indexOf('*');
+                    duty = inString.substring(0, pos);
+                    inString = inString.substring(pos);
+                    analogWrite(pduty, 255-(duty.toInt()));
+                break;
+             case 'p':
+                    inChar = inString.charAt(0);
+                    inString = inString.substring(1);
+                    if (inChar == 'a'){pulse = HIGH; duty_pulse = duty.toInt();}
+                    if (inChar == 's'){pulse = LOW; analogWrite(3, 255-(duty.toInt()));}
+                break;
+              default:
+                break;
+              
+            }
         }
-        digitalWrite(7, sette);
-        digitalWrite(6, sei);
-        */
-
-    }else{
-        //Serial.println("Transmission Error");
-        //while(rf22.available()){
-        //  rf22.recv(ver, 1);
-        //}
       }
     }
-    delay(400);
   }
 }
 
+// r255b*g255*b255*d125*
