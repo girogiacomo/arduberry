@@ -1,4 +1,4 @@
-# ardurasp [WIP]
+# arduberry [WIP]
 Rapberry Pi + Arduino
 
 [ENG]
