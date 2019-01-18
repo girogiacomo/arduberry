@@ -29,9 +29,11 @@ if (!$pwd || $pwd != $password) {
   ?>
 
 <?php
-error_reporting(E_ALL);
-ini_set("display_errors", 1);
-define("PORT","/dev/ttyACM0");
+if (!isset($_GET['api'])){
+	error_reporting(E_ALL);
+	ini_set("display_errors", 1);
+}
+	define("PORT","/dev/ttyACM0");
 //define("PORT","/dev/ttyUSB0");
 
 $stringa [14]="";
@@ -99,47 +101,9 @@ if (isset($_GET['blue'])){
 }
 if (isset($_GET['duty'])){
   $serial->sendMessage("d" . (string)$_GET['duty'] . "*");
-}
-				
+}				
 if (isset($_GET['action'])) {
 	switch ($_GET['action']) { 
-		
-		case "off23":  
-				$serial->sendMessage("s23*");
-			break;
-		case "on23":  
-				$serial->sendMessage("a23*");
-			break;
-		case "off25":  
-				$serial->sendMessage("s25*");
-			break;
-		case "on25":  
-				$serial->sendMessage("a25*");
-			break;
-		case "toggle23": 
-				/*
-				if($pin23==""){
-					$serial->sendMessage("a23*");
-					$pin23=="checked";
-				}else if($pin23=="checked"){
-					$serial->sendMessage("s23*");
-					$pin23=="";
-				}
-				*/
-				$serial->sendMessage("t23*");
-			break;
-		case "toggle25": 
-				/*
-				if($pin25==""){
-					$serial->sendMessage("a25*");
-					$pin25=="checked";
-				}else if($pin25=="checked"){
-					$serial->sendMessage("s25*");
-					$pin25=="";
-				}			
-				*/
-				$serial->sendMessage("t25*");
-			break;
 		case "reset!": 
 				$serial->sendMessage("R*");
 				usleep(2000000);
@@ -165,6 +129,12 @@ if (isset($_GET['action'])) {
 				$serial->sendMessage("ps");
 				$pulse=="";
 			break;
+        default:
+                if(strpos($_GET['action'], 'toggle') !== false){
+                    $value = $_GET['action'][6] * 10 + $_GET['action'][7];
+                    $serial->sendMessage("t$value*");
+                }
+            break;
 	}
 }
 
