@@ -133,7 +133,13 @@ if (isset($_GET['action'])) {
                 if(strpos($_GET['action'], 'toggle') !== false){
                     $value = $_GET['action'][6] * 10 + $_GET['action'][7];
                     $serial->sendMessage("t$value*");
-                }
+                } else if(strpos($_GET['action'], 'on') !== false){
+                    $value = $_GET['action'][2] * 10 + $_GET['action'][1];
+                    $serial->sendMessage("a$value*");
+                } else if(strpos($_GET['action'], 'off') !== false){
+                    $value = $_GET['action'][2] * 10 + $_GET['action'][4];
+                    $serial->sendMessage("s$value*");
+                }					
             break;
 	}
 }
