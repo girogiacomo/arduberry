@@ -134,10 +134,10 @@ if (isset($_GET['action'])) {
                     $value = $_GET['action'][6] * 10 + $_GET['action'][7];
                     $serial->sendMessage("t$value*");
                 } else if(strpos($_GET['action'], 'on') !== false){
-                    $value = $_GET['action'][2] * 10 + $_GET['action'][1];
+                    $value = $_GET['action'][2] * 10 + $_GET['action'][3];
                     $serial->sendMessage("a$value*");
                 } else if(strpos($_GET['action'], 'off') !== false){
-                    $value = $_GET['action'][2] * 10 + $_GET['action'][4];
+                    $value = $_GET['action'][3] * 10 + $_GET['action'][4];
                     $serial->sendMessage("s$value*");
                 }					
             break;
